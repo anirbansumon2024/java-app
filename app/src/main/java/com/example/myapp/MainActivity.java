@@ -11,6 +11,7 @@ public class MainActivity extends AppCompatActivity {
 
     private ExoPlayer player;
     private PlayerView playerView;
+    
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
