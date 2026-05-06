@@ -1,3 +1,5 @@
+package com.example.myapp;
+
 import android.os.Bundle;
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
