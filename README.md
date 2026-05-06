@@ -1,32 +1,38 @@
-# Java 21 Starter Project
+# Android Blank Starter Project
 
-একটি ব্লাংক Java 21 Maven প্রজেক্ট, GitHub Actions CI সহ।
+Java 21 + Android (minSdk 24, targetSdk 34) + GitHub Actions APK Build
 
 ## প্রজেক্ট স্ট্রাকচার
 
 ```
-java21-starter/
-├── .github/workflows/build.yml   # GitHub Actions CI
-├── src/
-│   ├── main/java/com/example/
-│   │   └── Main.java
-│   └── test/java/com/example/
-│       └── MainTest.java
-├── pom.xml
-└── README.md
+android-starter/
+├── .github/workflows/build.yml     ← GitHub Actions (APK বিল্ড)
+├── app/
+│   ├── build.gradle
+│   ├── proguard-rules.pro
+│   └── src/main/
+│       ├── AndroidManifest.xml
+│       ├── java/com/example/myapp/
+│       │   └── MainActivity.java
+│       └── res/
+│           ├── layout/activity_main.xml
+│           └── values/strings|colors|themes.xml
+├── gradle/wrapper/
+│   └── gradle-wrapper.properties
+├── gradlew
+├── build.gradle
+├── settings.gradle
+└── .gitignore
 ```
 
-## লোকালি রান করুন
+## ⚠️ প্রথমবার সেটআপ (gradle-wrapper.jar)
+
+`gradle-wrapper.jar` বাইনারি ফাইল, Git এ রাখা যায় না সরাসরি।
+Android Studio দিয়ে open করলে অটো তৈরি হয়। অথবা:
 
 ```bash
-# Build
-mvn clean package
-
-# Run
-java -jar target/java21-starter-1.0.0-SNAPSHOT.jar
-
-# Test
-mvn test
+# Gradle ইনস্টল থাকলে:
+gradle wrapper --gradle-version 8.4
 ```
 
 ## GitHub-এ পুশ করুন
@@ -34,9 +40,22 @@ mvn test
 ```bash
 git init
 git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/<your-username>/<repo-name>.git
+git commit -m "Initial Android project"
+git remote add origin https://github.com/<username>/<repo>.git
 git push -u origin main
 ```
 
-Push করার পরে GitHub Actions অটোমেটিক বিল্ড ও টেস্ট চালাবে।
+## GitHub Actions এ কী হবে?
+
+Push করলে অটোমেটিক:
+1. Java 21 সেটআপ হবে
+2. `./gradlew assembleDebug` → **debug APK** তৈরি হবে
+3. `./gradlew assembleRelease` → **release APK** তৈরি হবে
+4. দুটো APK Artifacts হিসেবে ডাউনলোড করা যাবে
+
+## লোকালি বিল্ড
+
+```bash
+./gradlew assembleDebug
+# APK পাবেন: app/build/outputs/apk/debug/app-debug.apk
+```
