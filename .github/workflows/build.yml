@@ -1,10 +1,10 @@
-name: Build Android APK (ABI Split)
+name: Build Android APK (Full Control)
 
 on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: "Select build type"
+        description: "Build type"
         required: true
         default: "release"
         type: choice
@@ -21,6 +21,16 @@ on:
         options:
           - yes
           - no
+
+      version_name:
+        description: "App Version Name (e.g. 1.0.0)"
+        required: true
+        default: "1.0.0"
+
+      version_code:
+        description: "Version Code (e.g. 1)"
+        required: true
+        default: "1"
 
 jobs:
   build:
@@ -44,38 +54,50 @@ jobs:
       - name: Enable AndroidX
         run: echo "android.useAndroidX=true" >> gradle.properties
 
-      # ⚙️ Inject ABI Split config
+      # 🔢 Set Version
+      - name: Set App Version
+        run: |
+          VERSION_NAME=${{ github.event.inputs.version_name }}
+          VERSION_CODE=${{ github.event.inputs.version_code }}
+
+          echo "Setting versionName=$VERSION_NAME versionCode=$VERSION_CODE"
+
+          sed -i "s/versionName \".*\"/versionName \"$VERSION_NAME\"/" app/build.gradle || true
+          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" app/build.gradle || true
+
+      # ⚙️ CLEAN ABI SPLIT (NO NDK CONFLICT)
       - name: Enable ABI Split
         run: |
-          echo "Injecting ABI split config..."
+          echo "Configuring ABI split..."
 
-          sed -i '/defaultConfig {/a\
-              ndk {\
-                  abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"\
-              }\
-          ' app/build.gradle
+          # remove old splits if exist
+          sed -i '/splits {/,/}/d' app/build.gradle || true
 
-          sed -i '/android {/a\
-              splits {\
-                  abi {\
-                      enable true\
-                      reset()\
-                      include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"\
-                      universalApk false\
-                  }\
-              }\
-          ' app/build.gradle
+          # add ABI split
+          cat <<'EOF' >> app/build.gradle
+
+android {
+    splits {
+        abi {
+            enable true
+            reset()
+            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+            universalApk false
+        }
+    }
+}
+EOF
 
       # 🔨 Debug Build
       - name: Build Debug APK
         if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' }}
         run: gradle assembleDebug --no-daemon
 
-      - name: Upload Debug APKs
+      - name: Upload Debug APK
         if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'both' }}
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk-abi
+          name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
       # 🔨 Release Build
@@ -83,20 +105,20 @@ jobs:
         if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' }}
         run: gradle assembleRelease --no-daemon
 
-      - name: Upload Release APKs
+      - name: Upload Release APK
         if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'both' }}
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk-abi
+          name: release-apk
           path: app/build/outputs/apk/release/*.apk
 
-      # 🚀 GitHub Release
+      # 🚀 GitHub Release (optional)
       - name: Upload to GitHub Release
         if: ${{ github.event.inputs.upload_release == 'yes' }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.${{ github.run_number }}
-          name: "ABI Build v1.${{ github.run_number }}"
+          tag_name: v${{ github.event.inputs.version_name }}
+          name: "Version ${{ github.event.inputs.version_name }}"
           files: app/build/outputs/apk/**/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
